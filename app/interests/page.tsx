@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { getAccount } from '@/lib/appwrite'
 
 interface InterestedWard {
   id?: string
@@ -46,13 +49,27 @@ interface Ward {
 }
 
 export default function InterestsPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [interestedWardAnalytics, setInterestedWardAnalytics] = useState<InterestedWardAnalytics | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat().format(num)
+  }
+
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    try {
+      const account = getAccount()
+      await account.deleteSession('current')
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+      setLoggingOut(false)
+    }
   }
 
   const loadData = async () => {
@@ -194,8 +211,20 @@ export default function InterestsPage() {
       <header className="dashboard-header">
         <div className="dashboard-header-content">
           <div className="dashboard-title-section">
-            <h1 className="dashboard-title">Interested Wards Analytics</h1>
-            <p className="dashboard-subtitle">Community interest in different wards</p>
+            <div className="dashboard-logo-title">
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={40}
+                height={40}
+                className="dashboard-logo"
+                priority
+              />
+              <div>
+                <h1 className="dashboard-title">Interested Wards Analytics</h1>
+                <p className="dashboard-subtitle">Community interest in different wards</p>
+              </div>
+            </div>
           </div>
           <div className="dashboard-header-actions">
             {lastUpdated && (
@@ -216,6 +245,12 @@ export default function InterestsPage() {
                 <path d="M2.5 2.5L5.5 5.5M10.5 10.5L13.5 13.5M2.5 13.5L5.5 10.5M10.5 5.5L13.5 2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
               Refresh
+            </button>
+            <button className="btn-logout" onClick={handleLogout} disabled={loggingOut}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M6 14H3C2.44772 14 2 13.5523 2 13V3C2 2.44772 2.44772 2 3 2H6M10 11L14 7M14 7L10 3M14 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {loggingOut ? 'Logging out...' : 'Logout'}
             </button>
           </div>
         </div>
@@ -325,3 +360,4 @@ export default function InterestsPage() {
     </div>
   )
 }
+
