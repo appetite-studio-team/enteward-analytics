@@ -195,6 +195,32 @@ body {
   transform: rotate(90deg);
 }
 
+.btn-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-white);
+  border: 1px solid var(--color-white);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+}
+
+.btn-nav:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-nav:active {
+  transform: translateY(0);
+}
+
 /* Main Content */
 .dashboard-main {
   flex: 1;
