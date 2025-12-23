@@ -170,8 +170,6 @@ export default function Dashboard() {
             const usersDocsData = await usersDocsResponse.json()
             const usersDocs = usersDocsData.documents || []
             
-            console.log(`Fetched ${usersDocs.length} user documents for chart`)
-            
             // Initialize months
             const months = [
               'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -202,8 +200,6 @@ export default function Dashboard() {
                 usersWithoutDate++
               }
             })
-
-            console.log(`Users with valid date: ${usersWithValidDate}, without date: ${usersWithoutDate}`)
 
             // Convert to array format
             const monthlyData: MonthlyData[] = months.map((monthName, index) => ({
@@ -381,7 +377,7 @@ export default function Dashboard() {
               />
               <div>
                 <h1 className="dashboard-title">Enteward Analytics</h1>
-                <p className="dashboard-subtitle">Comprehensive dashboard for community insights</p>
+                <p className="dashboard-subtitle">Dashboard for community insights</p>
               </div>
             </div>
           </div>

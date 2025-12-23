@@ -48,16 +48,43 @@ interface Ward {
   municipalityName?: string
 }
 
+interface InterestedCouncillor {
+  id: number
+  district: string
+  panchayath_name: string
+  ward_number: string
+  panchayath_type: string
+  name: string
+  phone_number: string
+  date_created?: string
+  date_updated?: string
+  [key: string]: any
+}
+
 export default function InterestsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [interestedWardAnalytics, setInterestedWardAnalytics] = useState<InterestedWardAnalytics | null>(null)
+  const [interestedCouncillors, setInterestedCouncillors] = useState<InterestedCouncillor[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat().format(num)
+  }
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null
+    try {
+      const date = new Date(dateString)
+      return {
+        date: date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      }
+    } catch {
+      return null
+    }
   }
 
   const handleLogout = async () => {
@@ -126,7 +153,14 @@ export default function InterestsPage() {
 
       // Fetch and process interested wards data
       try {
-        const interestedWardsResponse = await fetch('/api/interested-wards')
+        // Add timestamp to prevent caching
+        const timestamp = new Date().getTime()
+        const interestedWardsResponse = await fetch(`/api/interested-wards?t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
         if (interestedWardsResponse.ok) {
           const interestedWardsData = await interestedWardsResponse.json()
           const interestedWards: InterestedWard[] = interestedWardsData.data || []
@@ -188,6 +222,25 @@ export default function InterestsPage() {
       } catch (error) {
         console.error('Error fetching interested wards:', error)
         setError('Failed to fetch interested wards data')
+      }
+
+      // Fetch interested councillors
+      try {
+        // Add timestamp to prevent caching
+        const timestamp = new Date().getTime()
+        const interestedCouncillorsResponse = await fetch(`/api/interested-councillors?t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
+        if (interestedCouncillorsResponse.ok) {
+          const interestedCouncillorsData = await interestedCouncillorsResponse.json()
+          setInterestedCouncillors(interestedCouncillorsData.data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching interested councillors:', error)
+        // Don't set error state, just log it
       }
 
       setLastUpdated(new Date())
@@ -352,6 +405,71 @@ export default function InterestsPage() {
                     </div>
                   </div>
                 )}
+              </section>
+            )}
+
+            {/* Interested Councillors Section */}
+            {interestedCouncillors.length > 0 && (
+              <section className="metrics-section">
+                <div className="section-header">
+                  <div>
+                    <h2 className="section-title">Interested Councillors</h2>
+                    <p className="section-description">Councillors who have shown interest in the platform</p>
+                  </div>
+                  <div className="section-badge">
+                    {formatNumber(interestedCouncillors.length)} Councillors
+                  </div>
+                </div>
+                <div className="councillors-list">
+                  {interestedCouncillors.map((councillor) => {
+                    const createdDate = formatDate(councillor.date_created || councillor.dateCreated || councillor.created_at || councillor.createdAt)
+                    return (
+                      <div key={councillor.id} className="councillor-list-item">
+                        <div className="councillor-list-main">
+                          <div className="councillor-list-header">
+                            <h3 className="councillor-list-name">{councillor.name}</h3>
+                            {createdDate && (
+                              <div className="councillor-list-date">
+                                <span className="councillor-date-text">{createdDate.date}</span>
+                                <span className="councillor-time-text">{createdDate.time}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="councillor-list-details">
+                            <div className="councillor-detail-item">
+                              <span className="councillor-detail-label">Ward</span>
+                              <span className="councillor-detail-value">#{councillor.ward_number}</span>
+                            </div>
+                            <div className="councillor-detail-item">
+                              <span className="councillor-detail-label">District</span>
+                              <span className="councillor-detail-value">{councillor.district}</span>
+                            </div>
+                            <div className="councillor-detail-item">
+                              <span className="councillor-detail-label">Panchayath</span>
+                              <span className="councillor-detail-value">{councillor.panchayath_name}</span>
+                            </div>
+                            <div className="councillor-detail-item">
+                              <span className="councillor-detail-label">Type</span>
+                              <span className="councillor-detail-value">{councillor.panchayath_type}</span>
+                            </div>
+                            <div className="councillor-detail-item">
+                              <span className="councillor-detail-label">Phone</span>
+                              <span className="councillor-detail-value">
+                                <a 
+                                  href={`tel:${councillor.phone_number}`}
+                                  className="phone-link"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {councillor.phone_number}
+                                </a>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </section>
             )}
           </>

@@ -7,10 +7,6 @@ export async function GET() {
     const databaseId = CONFIG.databaseId.replace(/^database-/, '')
     const url = `${CONFIG.endpoint}/databases/${databaseId}/collections`
     
-    console.log('Fetching collections from:', url)
-    console.log('Project ID:', CONFIG.projectId)
-    console.log('Database ID:', databaseId)
-    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -32,7 +28,6 @@ export async function GET() {
     }
 
     const data = await response.json()
-    console.log('Successfully fetched collections:', data.collections?.length || 0, 'collections')
     return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error fetching collections:', error)

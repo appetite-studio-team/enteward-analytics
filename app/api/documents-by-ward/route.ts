@@ -47,9 +47,6 @@ export async function GET(request: NextRequest) {
       
       const url = urlObj.toString()
       
-      console.log(`Fetching attempt ${attempts}: offset=${offset}, limit=${limit}`)
-      console.log(`URL: ${url}`)
-      
       try {
         const response = await fetch(url, {
           method: 'GET',
@@ -76,13 +73,11 @@ export async function GET(request: NextRequest) {
         // Set total on first request
         if (totalDocuments === 0) {
           totalDocuments = total
-          console.log(`Total documents available: ${totalDocuments}`)
         }
         
         if (documents.length > 0) {
           allDocuments = [...allDocuments, ...documents]
           offset += documents.length
-          console.log(`Fetched ${documents.length} documents. Total so far: ${allDocuments.length}/${totalDocuments}`)
           
           // Check if we've fetched all documents
           if (documents.length < limit || allDocuments.length >= totalDocuments) {
@@ -94,7 +89,6 @@ export async function GET(request: NextRequest) {
         
         // Safety check
         if (offset > 10000) {
-          console.warn('Reached safety limit')
           hasMore = false
         }
       } catch (fetchError: any) {
@@ -102,8 +96,6 @@ export async function GET(request: NextRequest) {
         throw fetchError
       }
     }
-    
-    console.log(`Final result: Fetched ${allDocuments.length} documents out of ${totalDocuments} total`)
     
     return NextResponse.json({
       documents: allDocuments,

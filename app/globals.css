@@ -721,6 +721,17 @@ body {
   white-space: nowrap;
 }
 
+.phone-link {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-base);
+}
+
+.phone-link:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
 .ward-stats {
   margin-top: var(--space-2);
 }
@@ -785,6 +796,94 @@ body {
   font-size: 0.75rem;
   color: var(--color-gray-600);
   font-weight: 500;
+}
+
+/* Councillors List Styles */
+.councillors-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.councillor-list-item {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  overflow: hidden;
+}
+
+.councillor-list-item:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-gray-300);
+}
+
+.councillor-list-main {
+  padding: var(--space-6);
+}
+
+.councillor-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.councillor-list-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+  margin: 0;
+  flex: 1;
+}
+
+.councillor-list-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.councillor-date-text {
+  font-size: 0.875rem;
+  color: var(--color-gray-600);
+  font-weight: 500;
+}
+
+.councillor-time-text {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+}
+
+.councillor-list-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.councillor-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.councillor-detail-label {
+  font-size: 0.75rem;
+  color: var(--color-gray-600);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.councillor-detail-value {
+  font-size: 0.9375rem;
+  color: var(--color-gray-900);
+  font-weight: 600;
 }
 
 /* Responsive Design */
@@ -1024,6 +1123,25 @@ body {
   
   .ward-stat-label {
     font-size: 0.6875rem;
+  }
+
+  .councillor-list-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .councillor-list-date {
+    align-items: flex-start;
+  }
+
+  .councillor-list-details {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .councillor-list-main {
+    padding: var(--space-4);
   }
   
   .alert {

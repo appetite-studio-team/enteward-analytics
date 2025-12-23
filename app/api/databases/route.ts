@@ -6,9 +6,6 @@ export async function GET() {
   try {
     const url = `${CONFIG.endpoint}/databases`
     
-    console.log('Fetching databases from:', url)
-    console.log('Project ID:', CONFIG.projectId)
-    
     const response = await fetch(url, {
       method: 'GET',
       headers: {

@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     // Fetch all items with pagination
@@ -17,6 +21,7 @@ export async function GET() {
           headers: {
             'Content-Type': 'application/json',
           },
+          cache: 'no-store', // Prevent caching
         }
       )
 
@@ -76,7 +81,14 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json(sanitizedData)
+    // Return response with no-cache headers
+    return NextResponse.json(sanitizedData, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    })
   } catch (error: any) {
     console.error('Error fetching interested wards:', error)
     return NextResponse.json(
@@ -85,3 +97,4 @@ export async function GET() {
     )
   }
 }
+
