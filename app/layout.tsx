@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import AuthGuard from './components/AuthGuard'
+import DashboardLayout from './components/DashboardLayout'
 
 export const metadata: Metadata = {
   title: 'Enteward Analytics Dashboard',
@@ -22,12 +23,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthGuard>{children}</AuthGuard>
+        <AuthGuard>
+          <DashboardLayout>{children}</DashboardLayout>
+        </AuthGuard>
       </body>
     </html>
   )
 }
-
-
-
-

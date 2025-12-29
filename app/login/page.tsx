@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getAccount } from '@/lib/appwrite'
+import { AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,11 +21,7 @@ export default function LoginPage() {
 
     try {
       const account = getAccount()
-      
-      // Create email password session
       await account.createEmailPasswordSession(email, password)
-      
-      // Redirect to dashboard on success
       router.push('/')
     } catch (err: any) {
       console.error('Login error:', err)
@@ -34,47 +31,47 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-wrapper">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 px-4">
+      <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="login-logo">
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={48}
-            height={48}
-            priority
-          />
+        <div className="flex justify-center mb-8">
+          <div className="bg-white p-4 rounded-2xl shadow-lg">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={64}
+              height={64}
+              priority
+              className="rounded-lg"
+            />
+          </div>
         </div>
 
         {/* Login Card */}
-        <div className="login-card">
-          <div className="login-header">
-            <h1 className="login-title">Admin Login</h1>
-            <p className="login-subtitle">Sign in to manage vulnerability entries</p>
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+            <p className="text-gray-600">Sign in to access your dashboard</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="login-form">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="login-error">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M10 6V10M10 14H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                <span>{error}</span>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                <span className="text-sm">{error}</span>
               </div>
             )}
 
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                Email
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
               </label>
               <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="form-input"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 placeholder="admin@example.com"
                 required
                 disabled={loading}
@@ -82,8 +79,8 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
               <input
@@ -91,7 +88,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="form-input"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 placeholder="Enter your password"
                 required
                 disabled={loading}
@@ -101,12 +98,12 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="login-button"
               disabled={loading}
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-primary-500/30"
             >
               {loading ? (
                 <>
-                  <div className="spinner-small"></div>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Signing in...</span>
                 </>
               ) : (
@@ -114,14 +111,14 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-        </div>
 
-        {/* Back to Home Link */}
-        <Link href="/" className="login-back-link">
-          ← Back to Home
-        </Link>
+          <div className="mt-6 text-center">
+            <Link href="/" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+              ← Back to Home
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
-

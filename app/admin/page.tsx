@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { getAccount } from '@/lib/appwrite'
 import type { Models } from 'appwrite'
+import { Shield, Home } from 'lucide-react'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -20,7 +22,6 @@ export default function AdminPage() {
         setChecking(false)
         setLoading(false)
       } catch (error) {
-        // User is not authenticated, redirect to login
         console.error('Auth check failed:', error)
         router.push('/login')
       }
@@ -29,83 +30,66 @@ export default function AdminPage() {
     checkAuth()
   }, [router])
 
-  const handleLogout = async () => {
-    try {
-      const account = getAccount()
-      await account.deleteSession('current')
-      router.push('/login')
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
-
   if (checking || loading) {
     return (
-      <div className="admin-loading">
-        <div className="spinner-large"></div>
-        <p>Checking authentication...</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
       </div>
     )
   }
 
   if (!user) {
-    return null // Will redirect to login
+    return null
   }
 
   return (
-    <div className="admin-container">
-      <div className="admin-header">
-        <div className="admin-header-content">
-          <div>
-            <h1 className="admin-title">Admin Dashboard</h1>
-            <p className="admin-subtitle">Welcome back, {user.email}</p>
-          </div>
-          <button onClick={handleLogout} className="logout-button">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M7 17L2 12M2 12L7 7M2 12H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Logout
-          </button>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p className="text-gray-600 mt-1">Welcome back, {user.email}</p>
       </div>
 
-      <div className="admin-content">
-        <div className="admin-welcome-card">
-          <div className="admin-welcome-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 6C13.1 6 14 6.9 14 8C14 9.1 13.1 10 12 10C10.9 10 10 9.1 10 8C10 6.9 10.9 6 12 6ZM16 17.58C15.82 17.84 15.55 18 15.24 18H8.76C8.45 18 8.18 17.84 8 17.58C7.82 17.32 7.75 17 7.8 16.7L8.5 13.5C8.5 12.67 9.17 12 10 12H14C14.83 12 15.5 12.67 15.5 13.5L16.2 16.7C16.25 17 16.18 17.32 16 17.58Z" fill="currentColor"/>
-            </svg>
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl">
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-10 h-10 text-primary-600" />
           </div>
-          <h2 className="admin-welcome-title">Authentication Successful</h2>
-          <p className="admin-welcome-text">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Successful</h2>
+          <p className="text-gray-600">
             You are now authenticated and can access the admin dashboard.
           </p>
-          <div className="admin-user-info">
-            <div className="admin-info-item">
-              <span className="admin-info-label">Email:</span>
-              <span className="admin-info-value">{user.email}</span>
-            </div>
-            <div className="admin-info-item">
-              <span className="admin-info-label">User ID:</span>
-              <span className="admin-info-value">{user.$id}</span>
-            </div>
-            <div className="admin-info-item">
-              <span className="admin-info-label">Status:</span>
-              <span className="admin-info-value admin-status-verified">Verified</span>
-            </div>
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-6 mb-6 space-y-4">
+          <div className="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
+            <span className="text-sm font-medium text-gray-600">Email:</span>
+            <span className="text-sm font-semibold text-gray-900">{user.email}</span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
+            <span className="text-sm font-medium text-gray-600">User ID:</span>
+            <span className="text-sm font-semibold text-gray-900 break-all">{user.$id}</span>
+          </div>
+          <div className="flex justify-between items-center py-2">
+            <span className="text-sm font-medium text-gray-600">Status:</span>
+            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+              Verified
+            </span>
           </div>
         </div>
 
-        <div className="admin-actions">
-          <a href="/" className="admin-action-button">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M3 10L9 4M3 10L9 16M3 10H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+        <div className="flex justify-center">
+          <Link 
+            href="/"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-primary-500/30"
+          >
+            <Home className="w-5 h-5" />
             Go to Dashboard
-          </a>
+          </Link>
         </div>
       </div>
     </div>
   )
 }
-

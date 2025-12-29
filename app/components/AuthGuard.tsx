@@ -47,9 +47,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   // Show loading state while checking authentication
   if (isAuthenticated === null) {
     return (
-      <div className="auth-loading">
-        <div className="spinner-large"></div>
-        <p>Checking authentication...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-gray-600">Checking authentication...</p>
       </div>
     )
   }
@@ -67,4 +67,3 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   // User is authenticated, render children
   return <>{children}</>
 }
-

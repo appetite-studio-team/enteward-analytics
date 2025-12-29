@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { CONFIG, getAccount } from '@/lib/appwrite'
+import { getAccount } from '@/lib/appwrite'
+import { Users, Droplet, Handshake, Heart, AlertCircle, DollarSign, FileText } from 'lucide-react'
 
 interface Collection {
   $id: string
@@ -45,7 +44,6 @@ interface Ward {
   }
 }
 
-
 export default function Dashboard() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -54,22 +52,9 @@ export default function Dashboard() {
   const [wards, setWards] = useState<Ward[]>([])
   const [monthlyUserData, setMonthlyUserData] = useState<MonthlyData[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [loggingOut, setLoggingOut] = useState(false)
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat().format(num)
-  }
-
-  const handleLogout = async () => {
-    setLoggingOut(true)
-    try {
-      const account = getAccount()
-      await account.deleteSession('current')
-      router.push('/login')
-    } catch (error) {
-      console.error('Logout error:', error)
-      setLoggingOut(false)
-    }
   }
 
   const loadData = async () => {
@@ -118,7 +103,6 @@ export default function Dashboard() {
         })
       )
 
-      // Map collection names to metrics (case-insensitive matching)
       const getCollectionCount = (name: string): number => {
         const collection = collectionData.find(
           col => col.name.toLowerCase() === name.toLowerCase()
@@ -127,13 +111,11 @@ export default function Dashboard() {
         return typeof collection.documentCount === 'number' ? collection.documentCount : 0
       }
 
-      // Find collections by common name variations
       const findCollectionByName = (names: string[]): number => {
         for (const name of names) {
           const count = getCollectionCount(name)
           if (count > 0) return count
         }
-        // Try partial matching
         const collection = collectionData.find(col => 
           names.some(name => col.name.toLowerCase().includes(name.toLowerCase()))
         )
@@ -156,7 +138,6 @@ export default function Dashboard() {
         totalIssueReports
       })
 
-      // Fetch user documents for monthly chart
       const usersCollection = collectionData.find(col => 
         ['user', 'users', 'member', 'members'].some(name => 
           col.name.toLowerCase().includes(name.toLowerCase())
@@ -170,7 +151,6 @@ export default function Dashboard() {
             const usersDocsData = await usersDocsResponse.json()
             const usersDocs = usersDocsData.documents || []
             
-            // Initialize months
             const months = [
               'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -181,10 +161,6 @@ export default function Dashboard() {
               monthlyCounts[index + 1] = 0
             })
 
-            let usersWithValidDate = 0
-            let usersWithoutDate = 0
-
-            // Group ALL users by joinedDate (across all years)
             usersDocs.forEach((user: any) => {
               const joinedDate = user.joinedDate || user.joined_date || user.$createdAt || user.createdAt || user.created_at
               if (joinedDate) {
@@ -192,16 +168,10 @@ export default function Dashboard() {
                 if (!isNaN(date.getTime())) {
                   const userMonth = date.getMonth() + 1
                   monthlyCounts[userMonth] = (monthlyCounts[userMonth] || 0) + 1
-                  usersWithValidDate++
-                } else {
-                  usersWithoutDate++
                 }
-              } else {
-                usersWithoutDate++
               }
             })
 
-            // Convert to array format
             const monthlyData: MonthlyData[] = months.map((monthName, index) => ({
               month: monthName,
               count: monthlyCounts[index + 1] || 0,
@@ -218,7 +188,6 @@ export default function Dashboard() {
         setMonthlyUserData([])
       }
 
-      // Fetch wards, councillors, and municipalities from Directus API
       let wardsList: Ward[] = []
       let councillorsMap: Map<number, string> = new Map()
       let municipalitiesMap: Map<number, string> = new Map()
@@ -258,14 +227,12 @@ export default function Dashboard() {
         console.error('Error fetching data:', error)
       }
 
-      // Map names to wards
       wardsList = wardsList.map(ward => ({
         ...ward,
         councillorName: councillorsMap.get(ward.ward_councillor) || `Councillor #${ward.ward_councillor}`,
         municipalityName: municipalitiesMap.get(ward.muncipality) || `Municipality #${ward.muncipality}`
       }))
 
-      // Fetch documents for each collection and group by ward
       if (wardsList.length > 0) {
         const usersCollection = collectionData.find(col => 
           ['user', 'users', 'member', 'members'].some(name => 
@@ -360,285 +327,310 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [])
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading analytics data...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="dashboard">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div className="dashboard-header-content">
-          <div className="dashboard-title-section">
-            <div className="dashboard-logo-title">
-              <Image
-                src="/logo.png"
-                alt="Logo"
-                width={40}
-                height={40}
-                className="dashboard-logo"
-                priority
-              />
-              <div>
-                <h1 className="dashboard-title">Enteward Analytics</h1>
-                <p className="dashboard-subtitle">Dashboard for community insights</p>
-              </div>
-            </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-1">Welcome to your analytics dashboard</p>
+        </div>
+        {lastUpdated && (
+          <div className="text-right">
+            <p className="text-xs text-gray-500">Last updated</p>
+            <p className="text-sm font-medium text-gray-700">{lastUpdated.toLocaleTimeString()}</p>
           </div>
-          <div className="dashboard-header-actions">
-            {lastUpdated && (
-              <div className="last-updated">
-                <span className="last-updated-label">Last updated</span>
-                <span className="last-updated-time">{lastUpdated.toLocaleTimeString()}</span>
-              </div>
-            )}
-            <Link href="/interests" className="btn-nav">
-              Interests
-            </Link>
-            <Link href="/users" className="btn-nav">
-              Users
-            </Link>
-            <button className="btn-refresh" onClick={loadData} disabled={loading}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2V6M8 10V14M2 8H6M10 8H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M2.5 2.5L5.5 5.5M10.5 10.5L13.5 13.5M2.5 13.5L5.5 10.5M10.5 5.5L13.5 2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              Refresh
-            </button>
-            <button className="btn-logout" onClick={handleLogout} disabled={loggingOut}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M6 14H3C2.44772 14 2 13.5523 2 13V3C2 2.44772 2.44772 2 3 2H6M10 11L14 7M14 7L10 3M14 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              {loggingOut ? 'Logging out...' : 'Logout'}
-            </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+          <div>
+            <p className="font-semibold text-red-900">Error</p>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
           </div>
         </div>
-      </header>
+      )}
 
-      {/* Main Content */}
-      <main className="dashboard-main">
-        {error && (
-          <div className="alert alert-error">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="currentColor" strokeWidth="2"/>
-              <path d="M10 6V10M10 14H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+      {/* Key Metrics Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <div className="metric-card border-t-4 border-t-primary-500">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-primary-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1">Total Users</p>
+            <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalUsers)}</p>
+            <p className="text-xs text-gray-500 mt-2">Registered members</p>
+          </div>
+
+          <div className="metric-card border-t-4 border-t-red-500">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <Droplet className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1">Blood Donors</p>
+            <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalBloodDonors)}</p>
+            <p className="text-xs text-gray-500 mt-2">Active donors</p>
+          </div>
+
+          <div className="metric-card border-t-4 border-t-green-500">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Handshake className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1">Volunteers</p>
+            <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalVolunteers)}</p>
+            <p className="text-xs text-gray-500 mt-2">Active volunteers</p>
+          </div>
+
+          <div className="metric-card border-t-4 border-t-yellow-500">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-yellow-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1">Donations</p>
+            <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalDonations)}</p>
+            <p className="text-xs text-gray-500 mt-2">Total donations</p>
+          </div>
+
+          <div className="metric-card border-t-4 border-t-blue-500">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FileText className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1">Issue Reports</p>
+            <p className="text-3xl font-bold text-gray-900">{formatNumber(stats.totalIssueReports)}</p>
+            <p className="text-xs text-gray-500 mt-2">Reported issues</p>
+          </div>
+        </div>
+      )}
+
+      {/* Monthly User Registration Chart */}
+      {monthlyUserData.length > 0 && (
+        <div className="chart-container">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <strong>Error</strong>
-              <p>{error}</p>
+              <h2 className="text-xl font-bold text-gray-900">User Registrations</h2>
+              <p className="text-sm text-gray-600 mt-1">Monthly registration trends</p>
+            </div>
+            <div className="px-4 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
+              {formatNumber(stats?.totalUsers || 0)} Total Users
             </div>
           </div>
-        )}
-
-        {loading ? (
-          <div className="loading-state">
-            <div className="spinner-large"></div>
-            <p>Loading analytics data...</p>
+          <div className="h-80 w-full overflow-x-auto">
+            <svg 
+              className="w-full h-full min-w-full" 
+              viewBox={`0 0 ${Math.max(monthlyUserData.length * 80, 800)} 320`}
+              preserveAspectRatio="xMidYMid meet"
+            >
+              <defs>
+                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#2563eb" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              
+              {/* Grid lines */}
+              {Array.from({ length: 5 }).map((_, i) => {
+                const y = 20 + (i * 280 / 4)
+                return (
+                  <line
+                    key={`grid-${i}`}
+                    x1="40"
+                    y1={y}
+                    x2={Math.max(monthlyUserData.length * 80, 800) - 40}
+                    y2={y}
+                    stroke="#e5e7eb"
+                    strokeWidth="1"
+                    strokeDasharray="4 4"
+                  />
+                )
+              })}
+              
+              {/* Calculate points for the line */}
+              {(() => {
+                const maxCount = Math.max(...monthlyUserData.map(d => d.count), 1)
+                const chartWidth = Math.max(monthlyUserData.length * 80, 800) - 80
+                const chartHeight = 280
+                
+                const points = monthlyUserData.map((data, index) => {
+                  const x = 40 + (index / Math.max(monthlyUserData.length - 1, 1)) * chartWidth
+                  const y = 300 - (data.count / maxCount) * chartHeight
+                  return { x, y, data }
+                })
+                
+                // Create path string for the line
+                const pathData = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+                
+                // Create area path (for gradient fill)
+                const areaPath = `${pathData} L ${points[points.length - 1].x} 300 L ${points[0].x} 300 Z`
+                
+                return (
+                  <>
+                    {/* Area under line */}
+                    <path
+                      d={areaPath}
+                      fill="url(#lineGradient)"
+                    />
+                    
+                    {/* Line */}
+                    <path
+                      d={pathData}
+                      fill="none"
+                      stroke="#2563eb"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    
+                    {/* Points */}
+                    {points.map((point, index) => (
+                      <g key={index}>
+                        <circle
+                          cx={point.x}
+                          cy={point.y}
+                          r="5"
+                          fill="#2563eb"
+                          stroke="#ffffff"
+                          strokeWidth="2"
+                          className="hover:r-7 transition-all cursor-pointer"
+                        />
+                        {/* Tooltip value on hover */}
+                        <text
+                          x={point.x}
+                          y={point.y - 10}
+                          textAnchor="middle"
+                          fontSize="12"
+                          fill="#374151"
+                          fontWeight="600"
+                          className="pointer-events-none"
+                        >
+                          {point.data.count}
+                        </text>
+                      </g>
+                    ))}
+                    
+                    {/* X-axis labels */}
+                    {points.map((point, index) => (
+                      <g key={`label-${index}`}>
+                        <text
+                          x={point.x}
+                          y={315}
+                          textAnchor="middle"
+                          fontSize="12"
+                          fill="#6b7280"
+                          fontWeight="500"
+                        >
+                          {point.data.month}
+                        </text>
+                      </g>
+                    ))}
+                  </>
+                )
+              })()}
+            </svg>
           </div>
-        ) : (
-          <>
-            {/* Monthly User Registration Chart */}
-            {monthlyUserData.length > 0 && (
-              <section className="chart-section">
-                <div className="section-header">
-                  <div>
-                    <h2 className="section-title">User Registrations</h2>
-                    <p className="section-description">Monthly registration trends across all time</p>
+        </div>
+      )}
+
+      {/* Wards Section */}
+      {wards.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Ward Analytics</h2>
+              <p className="text-sm text-gray-600 mt-1">Detailed statistics by ward</p>
+            </div>
+            <div className="px-4 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
+              {formatNumber(wards.length)} Wards
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {wards.map((ward) => (
+              <div key={ward.id} className="bg-white rounded-xl p-6 shadow-soft border border-gray-100 hover:shadow-lg transition-all">
+                <div className="border-b border-gray-200 pb-4 mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">{ward.ward_name.trim()}</h3>
+                  <p className="text-sm text-primary-600 font-semibold">Ward #{ward.ward_number}</p>
+                </div>
+                
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-xs text-gray-600 font-medium">Councillor</span>
+                    <span className="text-sm text-gray-900 font-semibold">{ward.councillorName}</span>
                   </div>
-                  <div className="section-badge">
-                    {formatNumber(stats?.totalUsers || 0)} Total Users
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-xs text-gray-600 font-medium">Municipality</span>
+                    <span className="text-sm text-gray-900 font-semibold">{ward.municipalityName}</span>
                   </div>
                 </div>
-                <div className="chart-wrapper">
-                  <div className="chart-bars">
-                    {monthlyUserData.map((data) => {
-                      const maxCount = Math.max(...monthlyUserData.map(d => d.count), 1)
-                      const height = maxCount > 0 ? (data.count / maxCount) * 100 : 0
-                      return (
-                        <div key={data.month} className="chart-bar-group">
-                          <div className="chart-bar-container">
-                            <div 
-                              className="chart-bar"
-                              style={{ height: `${height}%` }}
-                              title={`${data.month}: ${formatNumber(data.count)} users`}
-                            >
-                              {data.count > 0 && (
-                                <span className="chart-bar-value">{formatNumber(data.count)}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="chart-bar-label">{data.month}</div>
+
+                {ward.analytics && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Statistics</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                          <Users className="w-5 h-5 text-primary-600" />
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Key Metrics */}
-            {stats && (
-              <section className="metrics-section">
-                <div className="section-header">
-                  <h2 className="section-title">Key Metrics</h2>
-                  <p className="section-description">Overview of community engagement</p>
-                </div>
-                <div className="metrics-grid">
-                  <div className="metric-card metric-card-primary">
-                    <div className="metric-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <div className="metric-card-content">
-                      <div className="metric-card-label">Total Users</div>
-                      <div className="metric-card-value">{formatNumber(stats.totalUsers)}</div>
-                      <div className="metric-card-description">Registered community members</div>
-                    </div>
-                  </div>
-
-                  <div className="metric-card metric-card-accent">
-                    <div className="metric-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <div className="metric-card-content">
-                      <div className="metric-card-label">Blood Donors</div>
-                      <div className="metric-card-value">{formatNumber(stats.totalBloodDonors)}</div>
-                      <div className="metric-card-description">Active blood donors</div>
-                    </div>
-                  </div>
-
-                  <div className="metric-card metric-card-success">
-                    <div className="metric-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <div className="metric-card-content">
-                      <div className="metric-card-label">Volunteers</div>
-                      <div className="metric-card-value">{formatNumber(stats.totalVolunteers)}</div>
-                      <div className="metric-card-description">Active volunteers</div>
-                    </div>
-                  </div>
-
-                  <div className="metric-card metric-card-warning">
-                    <div className="metric-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M20.84 4.61C20.3292 4.099 19.7228 3.69364 19.0554 3.41708C18.3879 3.14052 17.6725 2.99817 16.95 2.99817C16.2275 2.99817 15.5121 3.14052 14.8446 3.41708C14.1772 3.69364 13.5708 4.099 13.06 4.61L12 5.67L10.94 4.61C9.9083 3.57831 8.50903 2.99871 7.05 2.99871C5.59096 2.99871 4.19169 3.57831 3.16 4.61C2.1283 5.64169 1.54871 7.04097 1.54871 8.5C1.54871 9.95903 2.1283 11.3583 3.16 12.39L4.22 13.45L12 21.23L19.78 13.45L20.84 12.39C21.351 11.8792 21.7564 11.2728 22.0329 10.6054C22.3095 9.93789 22.4518 9.22248 22.4518 8.5C22.4518 7.77752 22.3095 7.06211 22.0329 6.39464C21.7564 5.72717 21.351 5.12075 20.84 4.61Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <div className="metric-card-content">
-                      <div className="metric-card-label">Donations</div>
-                      <div className="metric-card-value">{formatNumber(stats.totalDonations)}</div>
-                      <div className="metric-card-description">Total donation records</div>
-                    </div>
-                  </div>
-
-                  <div className="metric-card metric-card-info">
-                    <div className="metric-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <div className="metric-card-content">
-                      <div className="metric-card-label">Issue Reports</div>
-                      <div className="metric-card-value">{formatNumber(stats.totalIssueReports)}</div>
-                      <div className="metric-card-description">Reported issues</div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Wards Section */}
-            {wards.length > 0 && (
-              <section className="wards-section">
-                <div className="section-header">
-                  <div>
-                    <h2 className="section-title">Ward Analytics</h2>
-                    <p className="section-description">Detailed statistics by ward</p>
-                  </div>
-                  <div className="section-badge">{formatNumber(wards.length)} Wards</div>
-                </div>
-                <div className="wards-grid">
-                  {wards.map((ward) => (
-                    <div key={ward.id} className="ward-card">
-                      <div className="ward-card-header">
                         <div>
-                          <h3 className="ward-name">{ward.ward_name.trim()}</h3>
-                          <div className="ward-number">Ward #{ward.ward_number}</div>
+                          <p className="text-lg font-bold text-gray-900">{formatNumber(ward.analytics.users)}</p>
+                          <p className="text-xs text-gray-600">Users</p>
                         </div>
                       </div>
-                      
-                      <div className="ward-card-body">
-                        <div className="ward-info">
-                          <div className="ward-info-item">
-                            <span className="ward-info-label">Councillor</span>
-                            <span className="ward-info-value">{ward.councillorName}</span>
-                          </div>
-                          <div className="ward-info-item">
-                            <span className="ward-info-label">Municipality</span>
-                            <span className="ward-info-value">{ward.municipalityName}</span>
-                          </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                          <Droplet className="w-5 h-5 text-red-600" />
                         </div>
-
-                        {ward.analytics && (
-                          <div className="ward-stats">
-                            <div className="ward-stats-header">Statistics</div>
-                            <div className="ward-stats-grid">
-                              <div className="ward-stat-item">
-                                <div className="ward-stat-icon">👥</div>
-                                <div className="ward-stat-content">
-                                  <div className="ward-stat-value">{formatNumber(ward.analytics.users)}</div>
-                                  <div className="ward-stat-label">Users</div>
-                                </div>
-                              </div>
-                              <div className="ward-stat-item">
-                                <div className="ward-stat-icon">🩸</div>
-                                <div className="ward-stat-content">
-                                  <div className="ward-stat-value">{formatNumber(ward.analytics.donors)}</div>
-                                  <div className="ward-stat-label">Donors</div>
-                                </div>
-                              </div>
-                              <div className="ward-stat-item">
-                                <div className="ward-stat-icon">🤝</div>
-                                <div className="ward-stat-content">
-                                  <div className="ward-stat-value">{formatNumber(ward.analytics.volunteers)}</div>
-                                  <div className="ward-stat-label">Volunteers</div>
-                                </div>
-                              </div>
-                              <div className="ward-stat-item">
-                                <div className="ward-stat-icon">❤️</div>
-                                <div className="ward-stat-content">
-                                  <div className="ward-stat-value">{formatNumber(ward.analytics.donations)}</div>
-                                  <div className="ward-stat-label">Donations</div>
-                                </div>
-                              </div>
-                              <div className="ward-stat-item">
-                                <div className="ward-stat-icon">📋</div>
-                                <div className="ward-stat-content">
-                                  <div className="ward-stat-value">{formatNumber(ward.analytics.issueReports)}</div>
-                                  <div className="ward-stat-label">Reports</div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">{formatNumber(ward.analytics.donors)}</p>
+                          <p className="text-xs text-gray-600">Donors</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                          <Handshake className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">{formatNumber(ward.analytics.volunteers)}</p>
+                          <p className="text-xs text-gray-600">Volunteers</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                          <Heart className="w-5 h-5 text-pink-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">{formatNumber(ward.analytics.donations)}</p>
+                          <p className="text-xs text-gray-600">Donations</p>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
-        )}
-      </main>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
