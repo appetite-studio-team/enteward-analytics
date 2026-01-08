@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAccount } from '@/lib/appwrite'
-import { MapPin, AlertCircle, BarChart, Map as MapIcon } from 'lucide-react'
+import { MapPin, AlertCircle, BarChart, Map as MapIcon, Filter, ArrowUpDown, X } from 'lucide-react'
 
 interface InterestedWard {
   id?: string
@@ -60,15 +60,44 @@ interface InterestedCouncillor {
   [key: string]: any
 }
 
+interface MonthlyData {
+  month: string
+  count: number
+  monthNumber: number
+}
+
 export default function InterestsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'councillors' | 'people'>('councillors')
   const [interestedWardAnalytics, setInterestedWardAnalytics] = useState<InterestedWardAnalytics | null>(null)
   const [interestedCouncillors, setInterestedCouncillors] = useState<InterestedCouncillor[]>([])
   const [interestedWards, setInterestedWards] = useState<InterestedWard[]>([])
   const [wardsList, setWardsList] = useState<Ward[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [monthlyInterestData, setMonthlyInterestData] = useState<MonthlyData[]>([])
+  
+  // Filter and sort states for Councillors
+  const [councillorFilters, setCouncillorFilters] = useState({
+    district: '',
+    panchayath: '',
+    type: '',
+    search: ''
+  })
+  const [councillorSortBy, setCouncillorSortBy] = useState<'name' | 'district' | 'ward' | 'date'>('date')
+  const [councillorSortOrder, setCouncillorSortOrder] = useState<'asc' | 'desc'>('desc')
+  
+  // Filter and sort states for People
+  const [peopleFilters, setPeopleFilters] = useState({
+    district: '',
+    panchayath: '',
+    type: '',
+    ward: '',
+    search: ''
+  })
+  const [peopleSortBy, setPeopleSortBy] = useState<'ward' | 'district' | 'date'>('date')
+  const [peopleSortOrder, setPeopleSortOrder] = useState<'asc' | 'desc'>('desc')
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat().format(num)
@@ -85,6 +114,154 @@ export default function InterestsPage() {
     } catch {
       return null
     }
+  }
+
+  // Get unique values for filter dropdowns
+  const getUniqueDistricts = (data: any[]) => {
+    const districts = new Set<string>()
+    data.forEach(item => {
+      const district = item.district || item.District
+      if (district) districts.add(String(district))
+    })
+    return Array.from(districts).sort()
+  }
+
+  const getUniquePanchayaths = (data: any[]) => {
+    const panchayaths = new Set<string>()
+    data.forEach(item => {
+      const panchayath = item.panchayath_name || item.panchayathName
+      if (panchayath) panchayaths.add(String(panchayath))
+    })
+    return Array.from(panchayaths).sort()
+  }
+
+  const getUniqueTypes = (data: any[]) => {
+    const types = new Set<string>()
+    data.forEach(item => {
+      const type = item.type || item.panchayath_type
+      if (type) types.add(String(type))
+    })
+    return Array.from(types).sort()
+  }
+
+  // Filter and sort councillors
+  const getFilteredAndSortedCouncillors = () => {
+    let filtered = [...interestedCouncillors]
+
+    // Apply filters
+    if (councillorFilters.district) {
+      filtered = filtered.filter(c => c.district === councillorFilters.district)
+    }
+    if (councillorFilters.panchayath) {
+      filtered = filtered.filter(c => c.panchayath_name === councillorFilters.panchayath)
+    }
+    if (councillorFilters.type) {
+      filtered = filtered.filter(c => c.panchayath_type === councillorFilters.type)
+    }
+    if (councillorFilters.search) {
+      const searchLower = councillorFilters.search.toLowerCase()
+      filtered = filtered.filter(c => 
+        c.name.toLowerCase().includes(searchLower) ||
+        c.ward_number.toString().includes(searchLower) ||
+        c.phone_number.includes(searchLower) ||
+        c.district.toLowerCase().includes(searchLower)
+      )
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (councillorSortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase()
+          bValue = b.name.toLowerCase()
+          break
+        case 'district':
+          aValue = a.district.toLowerCase()
+          bValue = b.district.toLowerCase()
+          break
+        case 'ward':
+          aValue = parseInt(a.ward_number) || 0
+          bValue = parseInt(b.ward_number) || 0
+          break
+        case 'date':
+          aValue = new Date(a.date_created || a.dateCreated || a.created_at || a.createdAt || 0).getTime()
+          bValue = new Date(b.date_created || b.dateCreated || b.created_at || b.createdAt || 0).getTime()
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) return councillorSortOrder === 'asc' ? -1 : 1
+      if (aValue > bValue) return councillorSortOrder === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return filtered
+  }
+
+  // Filter and sort people
+  const getFilteredAndSortedPeople = () => {
+    let filtered = [...interestedWards]
+
+    // Apply filters
+    if (peopleFilters.district) {
+      filtered = filtered.filter(w => (w.district || w.District) === peopleFilters.district)
+    }
+    if (peopleFilters.panchayath) {
+      filtered = filtered.filter(w => (w.panchayath_name || w.panchayathName) === peopleFilters.panchayath)
+    }
+    if (peopleFilters.type) {
+      filtered = filtered.filter(w => w.type === peopleFilters.type)
+    }
+    if (peopleFilters.ward) {
+      const wardNum = String(peopleFilters.ward)
+      filtered = filtered.filter(w => 
+        String(w.ward_number || w.ward || w.wardId || w.ward_id) === wardNum
+      )
+    }
+    if (peopleFilters.search) {
+      const searchLower = peopleFilters.search.toLowerCase()
+      filtered = filtered.filter(w => {
+        const wardNumber = String(w.ward_number || w.ward || w.wardId || w.ward_id || '')
+        const district = String(w.district || w.District || '')
+        const panchayath = String(w.panchayath_name || w.panchayathName || '')
+        return wardNumber.includes(searchLower) || 
+               district.toLowerCase().includes(searchLower) ||
+               panchayath.toLowerCase().includes(searchLower)
+      })
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (peopleSortBy) {
+        case 'ward':
+          aValue = parseInt(String(a.ward_number || a.ward || a.wardId || a.ward_id || 0)) || 0
+          bValue = parseInt(String(b.ward_number || b.ward || b.wardId || b.ward_id || 0)) || 0
+          break
+        case 'district':
+          aValue = (a.district || a.District || '').toLowerCase()
+          bValue = (b.district || b.District || '').toLowerCase()
+          break
+        case 'date':
+          aValue = new Date(a.date_created || a.dateCreated || a.created_at || a.createdAt || a.$createdAt || 0).getTime()
+          bValue = new Date(b.date_created || b.dateCreated || b.created_at || b.createdAt || b.$createdAt || 0).getTime()
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) return peopleSortOrder === 'asc' ? -1 : 1
+      if (aValue > bValue) return peopleSortOrder === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return filtered
   }
 
   const loadData = async () => {
@@ -138,6 +315,7 @@ export default function InterestsPage() {
       }))
       setWardsList(mappedWardsList)
 
+      let interestedWardsList: InterestedWard[] = []
       try {
         const timestamp = new Date().getTime()
         const interestedWardsResponse = await fetch(`/api/interested-wards?t=${timestamp}`, {
@@ -148,7 +326,7 @@ export default function InterestsPage() {
         })
         if (interestedWardsResponse.ok) {
           const interestedWardsData = await interestedWardsResponse.json()
-          const interestedWardsList: InterestedWard[] = interestedWardsData.data || []
+          interestedWardsList = interestedWardsData.data || []
           
           // Store the full list of interested wards
           setInterestedWards(interestedWardsList)
@@ -206,6 +384,7 @@ export default function InterestsPage() {
         setError('Failed to fetch interested wards data')
       }
 
+      let interestedCouncillorsList: InterestedCouncillor[] = []
       try {
         const timestamp = new Date().getTime()
         const interestedCouncillorsResponse = await fetch(`/api/interested-councillors?t=${timestamp}`, {
@@ -216,10 +395,59 @@ export default function InterestsPage() {
         })
         if (interestedCouncillorsResponse.ok) {
           const interestedCouncillorsData = await interestedCouncillorsResponse.json()
-          setInterestedCouncillors(interestedCouncillorsData.data || [])
+          interestedCouncillorsList = interestedCouncillorsData.data || []
+          setInterestedCouncillors(interestedCouncillorsList)
         }
       } catch (error) {
         console.error('Error fetching interested councillors:', error)
+      }
+
+      // Calculate monthly interest data (combining both wards and councillors)
+      try {
+        const months = [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ]
+        
+        const monthlyCounts: { [key: number]: number } = {}
+        months.forEach((_, index) => {
+          monthlyCounts[index + 1] = 0
+        })
+
+        // Process interested wards
+        interestedWardsList.forEach((ward: InterestedWard) => {
+          const createdDate = ward.date_created || ward.dateCreated || ward.created_at || ward.createdAt || ward.$createdAt
+          if (createdDate) {
+            const date = new Date(createdDate)
+            if (!isNaN(date.getTime())) {
+              const month = date.getMonth() + 1
+              monthlyCounts[month] = (monthlyCounts[month] || 0) + 1
+            }
+          }
+        })
+
+        // Process interested councillors
+        interestedCouncillorsList.forEach((councillor: InterestedCouncillor) => {
+          const createdDate = councillor.date_created || councillor.dateCreated || councillor.created_at || councillor.createdAt
+          if (createdDate) {
+            const date = new Date(createdDate)
+            if (!isNaN(date.getTime())) {
+              const month = date.getMonth() + 1
+              monthlyCounts[month] = (monthlyCounts[month] || 0) + 1
+            }
+          }
+        })
+
+        const monthlyData: MonthlyData[] = months.map((monthName, index) => ({
+          month: monthName,
+          count: monthlyCounts[index + 1] || 0,
+          monthNumber: index + 1
+        }))
+
+        setMonthlyInterestData(monthlyData)
+      } catch (error) {
+        console.error('Error calculating monthly interest data:', error)
+        setMonthlyInterestData([])
       }
 
       setLastUpdated(new Date())
@@ -269,6 +497,134 @@ export default function InterestsPage() {
           <div>
             <p className="font-semibold text-red-900">Error</p>
             <p className="text-sm text-red-700 mt-1">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Monthly Interest Growth Chart */}
+      {monthlyInterestData.length > 0 && (
+        <div className="chart-container">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Interest Growth</h2>
+              <p className="text-sm text-gray-600 mt-1">Monthly interest trends</p>
+            </div>
+            <div className="px-4 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
+              {formatNumber(monthlyInterestData.reduce((sum, d) => sum + d.count, 0))} Total Interests
+            </div>
+          </div>
+          <div className="h-80 w-full overflow-x-auto">
+            <svg 
+              className="w-full h-full min-w-full" 
+              viewBox={`0 0 ${Math.max(monthlyInterestData.length * 80, 800)} 320`}
+              preserveAspectRatio="xMidYMid meet"
+            >
+              <defs>
+                <linearGradient id="interestLineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#2563eb" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              
+              {/* Grid lines */}
+              {Array.from({ length: 5 }).map((_, i) => {
+                const y = 20 + (i * 280 / 4)
+                return (
+                  <line
+                    key={`grid-${i}`}
+                    x1="40"
+                    y1={y}
+                    x2={Math.max(monthlyInterestData.length * 80, 800) - 40}
+                    y2={y}
+                    stroke="#e5e7eb"
+                    strokeWidth="1"
+                    strokeDasharray="4 4"
+                  />
+                )
+              })}
+              
+              {/* Calculate points for the line */}
+              {(() => {
+                const maxCount = Math.max(...monthlyInterestData.map(d => d.count), 1)
+                const chartWidth = Math.max(monthlyInterestData.length * 80, 800) - 80
+                const chartHeight = 280
+                
+                const points = monthlyInterestData.map((data, index) => {
+                  const x = 40 + (index / Math.max(monthlyInterestData.length - 1, 1)) * chartWidth
+                  const y = 300 - (data.count / maxCount) * chartHeight
+                  return { x, y, data }
+                })
+                
+                // Create path string for the line
+                const pathData = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+                
+                // Create area path (for gradient fill)
+                const areaPath = `${pathData} L ${points[points.length - 1].x} 300 L ${points[0].x} 300 Z`
+                
+                return (
+                  <>
+                    {/* Area under line */}
+                    <path
+                      d={areaPath}
+                      fill="url(#interestLineGradient)"
+                    />
+                    
+                    {/* Line */}
+                    <path
+                      d={pathData}
+                      fill="none"
+                      stroke="#2563eb"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    
+                    {/* Points */}
+                    {points.map((point, index) => (
+                      <g key={index}>
+                        <circle
+                          cx={point.x}
+                          cy={point.y}
+                          r="5"
+                          fill="#2563eb"
+                          stroke="#ffffff"
+                          strokeWidth="2"
+                          className="hover:r-7 transition-all cursor-pointer"
+                        />
+                        {/* Tooltip value on hover */}
+                        <text
+                          x={point.x}
+                          y={point.y - 10}
+                          textAnchor="middle"
+                          fontSize="12"
+                          fill="#374151"
+                          fontWeight="600"
+                          className="pointer-events-none"
+                        >
+                          {point.data.count}
+                        </text>
+                      </g>
+                    ))}
+                    
+                    {/* X-axis labels */}
+                    {points.map((point, index) => (
+                      <g key={`label-${index}`}>
+                        <text
+                          x={point.x}
+                          y={315}
+                          textAnchor="middle"
+                          fontSize="12"
+                          fill="#6b7280"
+                          fontWeight="500"
+                        >
+                          {point.data.month}
+                        </text>
+                      </g>
+                    ))}
+                  </>
+                )
+              })()}
+            </svg>
           </div>
         </div>
       )}
@@ -329,19 +685,163 @@ export default function InterestsPage() {
         </div>
       )}
 
+      {/* Tab Bar */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('councillors')}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${activeTab === 'councillors'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            Councillors
       {interestedCouncillors.length > 0 && (
+              <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
+                activeTab === 'councillors' 
+                  ? 'bg-primary-100 text-primary-700' 
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {formatNumber(interestedCouncillors.length)}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('people')}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${activeTab === 'people'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            People
+            {interestedWards.length > 0 && (
+              <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
+                activeTab === 'people' 
+                  ? 'bg-primary-100 text-primary-700' 
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {formatNumber(interestedWards.length)}
+              </span>
+            )}
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-6">
+        {activeTab === 'councillors' && (
         <div>
+            {interestedCouncillors.length > 0 ? (
+              <>
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900">Interested Councillors</h2>
               <p className="text-sm text-gray-600 mt-1">Councillors who have shown interest in the platform</p>
             </div>
             <div className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-              {formatNumber(interestedCouncillors.length)} Councillors
+                    {formatNumber(getFilteredAndSortedCouncillors().length)} Councillors
+                  </div>
+                </div>
+
+                {/* Filters and Sort */}
+                <div className="bg-white rounded-xl p-4 shadow-soft border border-gray-100 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                    {/* Search */}
+                    <div className="lg:col-span-2">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                      <input
+                        type="text"
+                        value={councillorFilters.search}
+                        onChange={(e) => setCouncillorFilters({...councillorFilters, search: e.target.value})}
+                        placeholder="Search by name, ward, phone..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    {/* District Filter */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">District</label>
+                      <select
+                        value={councillorFilters.district}
+                        onChange={(e) => setCouncillorFilters({...councillorFilters, district: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">All Districts</option>
+                        {getUniqueDistricts(interestedCouncillors).map(district => (
+                          <option key={district} value={district}>{district}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Panchayath Filter */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Panchayath</label>
+                      <select
+                        value={councillorFilters.panchayath}
+                        onChange={(e) => setCouncillorFilters({...councillorFilters, panchayath: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">All Panchayaths</option>
+                        {getUniquePanchayaths(interestedCouncillors).map(panchayath => (
+                          <option key={panchayath} value={panchayath}>{panchayath}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Type Filter */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                      <select
+                        value={councillorFilters.type}
+                        onChange={(e) => setCouncillorFilters({...councillorFilters, type: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">All Types</option>
+                        {getUniqueTypes(interestedCouncillors).map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">Sort by:</span>
+                      <select
+                        value={councillorSortBy}
+                        onChange={(e) => setCouncillorSortBy(e.target.value as 'name' | 'district' | 'ward' | 'date')}
+                        className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="name">Name</option>
+                        <option value="district">District</option>
+                        <option value="ward">Ward</option>
+                        <option value="date">Date</option>
+                      </select>
+                      <button
+                        onClick={() => setCouncillorSortOrder(councillorSortOrder === 'asc' ? 'desc' : 'asc')}
+                        className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors flex items-center gap-1"
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                        {councillorSortOrder === 'asc' ? 'Asc' : 'Desc'}
+                      </button>
+                    </div>
+                    {(councillorFilters.district || councillorFilters.panchayath || councillorFilters.type || councillorFilters.search) && (
+                      <button
+                        onClick={() => setCouncillorFilters({district: '', panchayath: '', type: '', search: ''})}
+                        className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                      >
+                        <X className="w-4 h-4" />
+                        Clear Filters
+                      </button>
+                    )}
             </div>
           </div>
+
           <div className="space-y-4">
-            {interestedCouncillors.map((councillor) => {
+                  {getFilteredAndSortedCouncillors().map((councillor) => {
               const createdDate = formatDate(councillor.date_created || councillor.dateCreated || councillor.created_at || councillor.createdAt)
               return (
                 <div key={councillor.id} className="bg-white rounded-xl p-6 shadow-soft border border-gray-100 hover:shadow-lg transition-all">
@@ -385,22 +885,134 @@ export default function InterestsPage() {
               )
             })}
           </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No interested councillors found.</p>
+              </div>
+            )}
         </div>
       )}
 
-      {interestedWards.length > 0 && (
+        {activeTab === 'people' && (
         <div>
+            {interestedWards.length > 0 ? (
+              <>
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900">People's Interests</h2>
               <p className="text-sm text-gray-600 mt-1">People who have shown interest in different wards</p>
             </div>
             <div className="px-4 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
-              {formatNumber(interestedWards.length)} People
+                    {formatNumber(getFilteredAndSortedPeople().length)} People
+                  </div>
+                </div>
+
+                {/* Filters and Sort */}
+                <div className="bg-white rounded-xl p-4 shadow-soft border border-gray-100 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                    {/* Search */}
+                    <div className="lg:col-span-2">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                      <input
+                        type="text"
+                        value={peopleFilters.search}
+                        onChange={(e) => setPeopleFilters({...peopleFilters, search: e.target.value})}
+                        placeholder="Search by ward, district, panchayath..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    {/* District Filter */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">District</label>
+                      <select
+                        value={peopleFilters.district}
+                        onChange={(e) => setPeopleFilters({...peopleFilters, district: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">All Districts</option>
+                        {getUniqueDistricts(interestedWards).map(district => (
+                          <option key={district} value={district}>{district}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Panchayath Filter */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Panchayath</label>
+                      <select
+                        value={peopleFilters.panchayath}
+                        onChange={(e) => setPeopleFilters({...peopleFilters, panchayath: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">All Panchayaths</option>
+                        {getUniquePanchayaths(interestedWards).map(panchayath => (
+                          <option key={panchayath} value={panchayath}>{panchayath}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Type Filter */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                      <select
+                        value={peopleFilters.type}
+                        onChange={(e) => setPeopleFilters({...peopleFilters, type: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">All Types</option>
+                        {getUniqueTypes(interestedWards).map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {/* Ward Filter */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Ward Number</label>
+                      <input
+                        type="text"
+                        value={peopleFilters.ward}
+                        onChange={(e) => setPeopleFilters({...peopleFilters, ward: e.target.value})}
+                        placeholder="Filter by ward number..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">Sort by:</span>
+                      <select
+                        value={peopleSortBy}
+                        onChange={(e) => setPeopleSortBy(e.target.value as 'ward' | 'district' | 'date')}
+                        className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="ward">Ward</option>
+                        <option value="district">District</option>
+                        <option value="date">Date</option>
+                      </select>
+                      <button
+                        onClick={() => setPeopleSortOrder(peopleSortOrder === 'asc' ? 'desc' : 'asc')}
+                        className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors flex items-center gap-1"
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                        {peopleSortOrder === 'asc' ? 'Asc' : 'Desc'}
+                      </button>
+                    </div>
+                    {(peopleFilters.district || peopleFilters.panchayath || peopleFilters.type || peopleFilters.ward || peopleFilters.search) && (
+                      <button
+                        onClick={() => setPeopleFilters({district: '', panchayath: '', type: '', ward: '', search: ''})}
+                        className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                      >
+                        <X className="w-4 h-4" />
+                        Clear Filters
+                      </button>
+                    )}
             </div>
           </div>
+
           <div className="space-y-4">
-            {interestedWards.map((ward, index) => {
+                  {getFilteredAndSortedPeople().map((ward, index) => {
               const createdDate = formatDate(ward.date_created || ward.dateCreated || ward.created_at || ward.createdAt || ward.$createdAt)
               const wardNumber = ward.ward_number || ward.ward || ward.wardId || ward.ward_id || 'N/A'
               const district = ward.District || ward.district || 'Unknown'
@@ -410,8 +1022,14 @@ export default function InterestsPage() {
               // Find matching ward details
               const matchingWard = wardsList.find(w => String(w.ward_number) === String(wardNumber))
               
-              // Get all available fields (excluding internal/technical fields)
-              const excludedFields = ['id', '$id', 'date_created', 'dateCreated', 'created_at', 'createdAt', '$createdAt', 'date_updated', 'dateUpdated', 'updated_at', 'updatedAt', '$updatedAt']
+                    // Get all available fields (excluding internal/technical fields and already displayed fields)
+                    const excludedFields = [
+                      'id', '$id', 
+                      'date_created', 'dateCreated', 'created_at', 'createdAt', '$createdAt', 
+                      'date_updated', 'dateUpdated', 'updated_at', 'updatedAt', '$updatedAt',
+                      'ward_number', 'ward', 'wardId', 'ward_id', 'wardNumber',
+                      'District', 'district', 'panchayath_name', 'panchayathName', 'type'
+                    ]
               const availableFields = Object.keys(ward).filter(key => 
                 !excludedFields.includes(key) && 
                 !key.startsWith('$') &&
@@ -440,11 +1058,7 @@ export default function InterestsPage() {
                   </div>
                   
                   {/* Standard Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    <div>
-                      <p className="text-xs text-gray-600 font-medium mb-1">Ward Number</p>
-                      <p className="text-sm font-semibold text-gray-900">#{wardNumber}</p>
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-gray-600 font-medium mb-1">District</p>
                       <p className="text-sm font-semibold text-gray-900">{district}</p>
@@ -513,8 +1127,15 @@ export default function InterestsPage() {
               )
             })}
           </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No people interests found.</p>
+              </div>
+            )}
         </div>
       )}
+      </div>
     </div>
   )
 }
