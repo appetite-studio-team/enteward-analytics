@@ -900,7 +900,7 @@ export default function InterestsPage() {
               <>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">People's Interests</h2>
+              <h2 className="text-xl font-bold text-gray-900">People&apos;s Interests</h2>
               <p className="text-sm text-gray-600 mt-1">People who have shown interest in different wards</p>
             </div>
             <div className="px-4 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
